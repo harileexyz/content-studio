@@ -6,14 +6,40 @@ Turn a topic into a researched short video, a matching Instagram feed graphic, c
 
 ## Project status
 
-Architecture approved on 7 October 2026. The first-build implementation plan below is ready for review; application code and integrations are not implemented.
+Desktop preview 0.1 is implemented. Brand setup, sample graphic creation, a content library, caption revisions, exact-target approval and Codex installation detection run locally. Real AI generation, video rendering, social publication and billing are not connected yet.
+
+## Run locally
+
+Use Node.js 24. Dependencies are pinned in package-lock.json.
+
+```sh
+npm ci
+npm run dev
+```
+
+To verify or package the preview:
+
+```sh
+npm run typecheck
+npm test
+npm run test:desktop
+npm run package:mac
+```
+
+The macOS app is created under release/mac-arm64 or release/mac depending on the build machine. This developer preview is unsigned; signing, notarization and automatic updates are required before selling a downloadable app. GitHub Actions runs the type checks, tests, desktop build and packaging; a local pass does not imply the remote checks have completed.
+
+Data is kept in Electron's userData directory: studio.sqlite and an assets directory. CONTENT_STUDIO_DATA_DIR can select a separate local workspace. One app process owns the SQLite database, and saved changes use atomic file replacement. sql.js supplies SQLite through WebAssembly, avoiding native module version mismatches; the full database is held in memory, appropriate for this first small local library.
+
+Sample graphics are real 1080×1350 SVG files. They are review samples, not researched content or publish-ready Instagram uploads. No video asset is created. Approval is recorded locally against the exact graphic bytes, caption and destination; it neither connects a social account nor publishes anything. Brand changes affect new packs, and existing packs keep their original brand. Revision history preserves previous captions and approvals.
+
+There is no standalone browser mode in this build. Launch Electron for the restricted desktop bridge and durable local storage. Codex detection invokes only the installed command-line tool's version command; it does not inspect credentials or establish an authenticated agent session.
 
 ## Proposed stack
 
 - Electron: desktop shell and restricted access to local tools; macOS first.
 - React, TypeScript and Vite: studio interface, with reusable components for a later web review interface.
 - Node.js and TypeScript: local workflow runner and provider adapters.
-- SQLite: local brands, content packs, revisions, durable jobs and approval records.
+- SQLite through sql.js: local brands, content packs, revisions, job records and approval records.
 - Python, Pillow and FFmpeg: migrate the existing video and graphic rendering workflow behind a versioned structured interface.
 - Codex App Server: first agent integration, via the installed Codex command-line executable. An installed desktop application alone is not sufficient.
 - Claude Agent SDK: later provider adapter, with supported authentication.
@@ -52,7 +78,7 @@ Jobs persist their stage, attempts and errors. Interrupted work resumes from ver
 4. A clearly labeled sample pack for exercising the review flow without AI credentials.
 5. Revision tracking and exact-target approval rules, tested independently of AI.
 
-This milestone does not promise live research, generated video, social publishing or billing. Subsequent milestones connect Codex, migrate rendering with actual media validation, and add publishing with independent verification for all targets.
+This milestone does not include live research, generated video, social publishing or billing. Subsequent milestones connect Codex, migrate rendering with actual media validation, and add publishing with independent verification for all targets.
 
 ## Commercial constraints
 
