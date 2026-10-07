@@ -4,16 +4,26 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 const executable = require('electron') as string
 const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE
-async function launch(dir: string) { return electron.launch({ executablePath: executable, args: ['.'], env: { ...env, CONTENT_STUDIO_DATA_DIR: dir } }) }
+async function launch(dir: string) { return electron.launch({ executablePath: process.env.STUDIO_TEST_EXECUTABLE ?? executable, args: process.env.STUDIO_TEST_EXECUTABLE ? [] : ['.'], env: { ...env, CONTENT_STUDIO_DATA_DIR: dir } }) }
 test('desktop persists a brand and exact approval through restart', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'studio-desktop-')); let app: ElectronApplication | undefined
   try {
     app = await launch(dir); let page = await app.firstWindow()
     await expect(page.getByRole('heading', { name: 'Your next idea starts here.' })).toBeVisible()
+    const invalidResult = await page.evaluate(async () => {
+      try { await window.studio!.saveBrand({ name: '', colors: ['#2546E8', '#D6F369', '#F2EFD9'], voice: 'Clear' }); return 'accepted' }
+      catch (error) { return (error as Error).message }
+    })
+    expect(invalidResult).toMatch(/missing or invalid/)
+    expect(await page.evaluate(async () => (await window.studio!.getState()).brand)).toBeNull()
     await page.getByRole('button', { name: 'Brand settings' }).click()
     await page.getByLabel('Brand name').fill('Test studio')
     await page.getByRole('button', { name: 'Save brand' }).click()
     await expect(page.getByText('Brand saved.')).toBeVisible()
+    await page.getByRole('button', { name: 'Connections', exact: true }).click()
+    await page.getByRole('button', { name: 'Check installation' }).click()
+    await expect(page.getByText(/Codex is installed|Install the Codex command-line tool to prepare/)).toBeVisible()
+    expect(await page.evaluate(async () => (await window.studio!.getState()).provider.connected)).toBe(false)
     await page.getByRole('button', { name: 'Create content' }).click()
     await page.getByLabel('What would you like to explain?').fill('Useful keyboard shortcuts')
     await page.getByRole('button', { name: 'Create sample pack' }).click()

@@ -10,11 +10,12 @@ function wrap(text: string): string[] {
   if (line) lines.push(line); return lines
 }
 export function makeGraphic(topic: string, brand: Brand): string {
-  const lines = wrap(topic); const size = lines.length > 5 ? 65 : 78; const step = size * 1.12
+  const lines = wrap(topic); const size = Math.min(78, 450 / Math.max(1, lines.length - 1) / 1.12); const step = size * 1.12
+  const brandSize = Math.min(32, 720 / Math.max(1, brand.name.length) / 0.65)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
   <rect width="1080" height="1350" fill="${brand.colors[0]}"/>
   <rect x="60" y="60" width="76" height="88" rx="20" fill="${brand.colors[1]}"/><text x="80" y="124" font-family="Arial,sans-serif" font-weight="700" font-size="70" fill="#141820">;</text>
-  <text x="163" y="117" font-family="Arial,sans-serif" font-size="32" font-weight="700" fill="#ffffff">${escape(brand.name)}</text>
+  <text x="163" y="117" font-family="Arial,sans-serif" font-size="${brandSize}" font-weight="700" fill="#ffffff">${escape(brand.name)}</text>
   <text x="60" y="239" font-family="Arial,sans-serif" font-size="27" fill="#ffffff">An idea worth explaining</text>
   ${lines.map((line, i) => `<text x="60" y="${350 + i * step}" font-family="Arial,sans-serif" font-size="${size}" font-weight="700" fill="#ffffff">${escape(line)}</text>`).join('')}
   <rect x="60" y="900" width="960" height="260" rx="30" fill="${brand.colors[2]}"/>

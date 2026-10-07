@@ -56,6 +56,17 @@ export class Workflow {
       const asset = pack.targets.find(t => t.destination === 'instagram_feed_post')?.asset
       let graphicPreview: string | null = null; let assetError: string | null = null
       try { if (asset) graphicPreview = this.previewAsset(asset) } catch (error) { assetError = (error as Error).message }
+      const invalidApprovals = pack.targets.filter(target => {
+        if (!target.approval) return false
+        if (!target.asset || target.approval.targetId !== target.id || target.approval.assetHash !== target.asset.hash || target.approval.caption !== target.caption || target.approval.destination !== target.destination) return true
+        try { this.bytes(target.asset); return false } catch { return true }
+      })
+      if (invalidApprovals.length) {
+        pack.history.push({ revision: pack.revision, targets: structuredClone(pack.targets), savedAt: new Date().toISOString() })
+        for (const target of invalidApprovals) target.approval = null
+        pack.revision++
+        this.store.updatePack(pack)
+      }
       return { ...pack, graphicPreview, assetError }
     })
   }

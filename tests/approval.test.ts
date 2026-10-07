@@ -63,4 +63,15 @@ describe('pack creation and exact approvals', () => {
     const graphic = readFileSync(join(dir, 'assets', pack.targets[2].asset!.filename), 'utf8')
     expect(graphic).not.toContain('<script>'); expect(graphic).toContain('&lt;script&gt;'); expect(graphic).toContain('width="1080" height="1350"'); store.close()
   })
+  it('invalidates an already-approved asset on refresh and keeps an audit history', async () => {
+    const { dir, store, workflow } = await studio(); const pack = workflow.createSamplePack({ topic: 'Shortcuts', requestId: 'one' })
+    workflow.approveTarget({ packId: pack.id, targetId: pack.targets[2].id, expectedRevision: 1 })
+    writeFileSync(join(dir, 'assets', pack.targets[2].asset!.filename), 'changed bytes')
+    const view = workflow.getPackViews()[0]
+    expect(view.targets[2].approval).toBeNull(); expect(view.graphicPreview).toBeNull(); expect(view.assetError).toMatch(/changed/i)
+    expect(store.getPack(pack.id)?.targets[2].approval).toBeNull()
+    expect(view.history[0].targets[2].approval?.assetHash).toBe(pack.targets[2].asset!.hash)
+    expect(workflow.getPackViews()[0].history).toHaveLength(1); store.close()
+    const reopened = await openStore(dir); expect(reopened.getPack(pack.id)?.targets[2].approval).toBeNull(); reopened.close()
+  })
 })

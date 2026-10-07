@@ -10,7 +10,7 @@ Desktop preview 0.1 is implemented. Brand setup, sample graphic creation, a cont
 
 ## Run locally
 
-Use Node.js 24. Dependencies are pinned in package-lock.json.
+Use Node.js 24 (`nvm use` if you use Node Version Manager). Dependencies are pinned in package-lock.json.
 
 ```sh
 npm ci
@@ -30,7 +30,7 @@ The macOS app is created under release/mac-arm64 or release/mac depending on the
 
 Data is kept in Electron's userData directory: studio.sqlite and an assets directory. CONTENT_STUDIO_DATA_DIR can select a separate local workspace. One app process owns the SQLite database, and saved changes use atomic file replacement. sql.js supplies SQLite through WebAssembly, avoiding native module version mismatches; the full database is held in memory, appropriate for this first small local library.
 
-Sample graphics are real 1080×1350 SVG files. They are review samples, not researched content or publish-ready Instagram uploads. No video asset is created. Approval is recorded locally against the exact graphic bytes, caption and destination; it neither connects a social account nor publishes anything. Brand changes affect new packs, and existing packs keep their original brand. Revision history preserves previous captions and approvals.
+Sample graphics are real 1080×1350 SVG files. They are review samples, not researched content or publish-ready Instagram uploads. No video asset is created. Approval is recorded locally against the exact graphic bytes, caption and destination; it neither connects a social account nor publishes anything. Brand changes affect new packs, and existing packs keep their original brand. Revision history preserves previous captions and approvals. Refreshing or reopening the app rechecks approved assets; missing or changed files invalidate active approval and retain the old record in history.
 
 There is no standalone browser mode in this build. Launch Electron for the restricted desktop bridge and durable local storage. Codex detection invokes only the installed command-line tool's version command; it does not inspect credentials or establish an authenticated agent session.
 
@@ -86,6 +86,10 @@ Subscription-backed third-party access is subject to each provider's current eli
 
 The existing workflow uses free local tools. Before distribution, audit renderer, font, voice-model and dependency licenses, including redistribution rights. Local work requires the customer's computer to be running. This repository is not granted an open-source license at this stage.
 
+## Dependency check
+
+The runtime dependency audit reports no known vulnerabilities at verification time. The full development-tool audit reports eight moderate findings in the packaging tool chain, stemming from an older proxy logger dependency. Its affected formatting package has no patched version in the package registry at verification time. These remain a release-hardening item; no high or critical findings remain.
+
 ## Official integration references
 
 - [Codex App Server](https://learn.chatgpt.com/docs/app-server)
@@ -97,7 +101,7 @@ The existing workflow uses free local tools. Before distribution, audit renderer
 
 **Goal:** Run a macOS desktop studio that saves a brand, creates a clearly labeled sample pack, supports revisions and records approval for exact targets.
 
-**Execution:** Use superpowers:executing-plans for inline implementation, or superpowers:subagent-driven-development if the owner selects helper-based execution. Selection and plan review precede product code.
+**Execution:** Approved for inline implementation on 7 October 2026. A separate reviewer checked the completed branch; its approval-invalidation finding was fixed with a failing-then-passing regression test.
 
 **Architecture:** React runs in a sandboxed Electron renderer. A narrow preload bridge sends validated requests to the main process. The main process owns SQLite persistence and provider detection. No network account or AI credential is required for the sample flow.
 
@@ -113,11 +117,11 @@ Files: package.json, package-lock.json, tsconfig.json, electron.vite.config.ts, 
 
 Interfaces: StudioBridge exposes getState(), saveBrand(input), createSamplePack(input), reviseTarget(input), approveTarget(input), and detectProvider(). All return promises with typed records; no generic filesystem or command method.
 
-- [ ] Install a compatible, pinned Electron/React/TypeScript toolchain with electron-vite, Zod, Vitest and Playwright. Add dev, build, typecheck and test scripts.
-- [ ] Write bridge validation tests rejecting an unknown destination and empty topic; run them before the handler implementation.
-- [ ] Implement window creation with nodeIntegration false, contextIsolation true and sandbox true. Load only the app's local production entry or explicit development server. Deny new windows and unexpected navigation. Reject requests from unexpected frames.
-- [ ] Expose each named operation separately through contextBridge and parse every request in the main process. Return user-safe errors without leaking paths or secrets.
-- [ ] Run type checks, bridge tests and the production build; confirm the shell launches before committing.
+- [x] Install a compatible, pinned Electron/React/TypeScript toolchain with electron-vite, Zod, Vitest and Playwright. Add dev, build, typecheck and test scripts.
+- [x] Write bridge validation tests rejecting an unknown destination and empty topic; run them before the handler implementation.
+- [x] Implement window creation with nodeIntegration false, contextIsolation true and sandbox true. Load only the app's local production entry or explicit development server. Deny new windows and unexpected navigation. Reject requests from unexpected frames.
+- [x] Expose each named operation separately through contextBridge and parse every request in the main process. Return user-safe errors without leaking paths or secrets.
+- [x] Run type checks, bridge tests and the production build; confirm the shell launches before committing.
 
 ### Task 2: Durable brands, packs and approval rules
 
@@ -125,33 +129,37 @@ Files: src/shared/models.ts, src/main/storage.ts, src/main/workflow.ts, tests/st
 
 Interfaces: Brand contains id, name, colors and voice. ContentPack contains id, topic, sample flag, revision, sources and three targets. Target contains id, destination, assetHash, caption and approval status. Job contains id, packId, stage and error. Approval contains targetId, revision, assetHash, caption, destination and approvedAt. StudioState contains brand, packs and provider status.
 
-- [ ] Add tests that write a brand to a temporary SQLite database, close it, reopen it and recover the identical record. Add duplicate-request tests using a requestId.
-- [ ] Add approval tests that reject missing assets and invalidate approval after caption, asset or destination changes. An unchanged target may keep its approval when another target changes.
-- [ ] Implement versioned SQLite migrations and transactional repository methods. Use a desktop-compatible SQLite package and verify native module packaging if one is selected.
-- [ ] Implement createSamplePack({topic, requestId}), reviseTarget({packId, targetId, caption}) and approveTarget({packId, targetId, expectedRevision}). Approval uses the stored target snapshot; stale revision requests fail.
-- [ ] Generate original sample graphics locally, hash the real bytes and show that sample video generation is unavailable. Do not approve a video target without a real video asset. Register samples with an explicit label and no fabricated research sources.
-- [ ] Run storage, duplicate-request and approval tests; commit the passing implementation.
+- [x] Add tests that write a brand to a temporary SQLite database, close it, reopen it and recover the identical record. Add duplicate-request tests using a requestId.
+- [x] Add approval tests that reject missing assets and invalidate approval after caption, asset or destination changes. An unchanged target may keep its approval when another target changes.
+- [x] Implement versioned SQLite migrations and transactional repository methods. Use a desktop-compatible SQLite package and verify native module packaging if one is selected.
+- [x] Implement createSamplePack({topic, requestId}), reviseTarget({packId, targetId, caption}) and approveTarget({packId, targetId, expectedRevision}). Approval uses the stored target snapshot; stale revision requests fail.
+- [x] Generate original sample graphics locally, hash the real bytes and show that sample video generation is unavailable. Do not approve a video target without a real video asset. Register samples with an explicit label and no fabricated research sources.
+- [x] Run storage, duplicate-request and approval tests; commit the passing implementation.
 
 ### Task 3: Brand, creation and review interface
 
 Files: src/renderer/components/BrandSetup.tsx, src/renderer/components/CreatePack.tsx, src/renderer/components/PackReview.tsx, src/renderer/components/ProviderStatus.tsx, src/renderer/styles.css, tests/studio.spec.ts.
 
-Interfaces: Components call StudioBridge methods and display StudioState. Review actions send expectedRevision from the visible snapshot. Browser preview uses an explicitly labeled in-memory demo bridge; only Electron uses durable SQLite.
+Interfaces: Components call StudioBridge methods and display StudioState. Review actions send expectedRevision from the visible snapshot. This milestone uses Electron and durable SQLite only; a standalone browser demo was deferred to avoid a second persistence implementation.
 
-- [ ] Write a user-flow test covering saved brand setup, sample pack creation, editing its caption and approval of the existing graphic only. Add a failure-path check that a missing video target cannot be approved.
-- [ ] Build a charcoal and cobalt studio with lime and cream preview graphics, readable type, keyboard focus and reduced-motion support. Keep sources, captions and each destination visible during review.
-- [ ] Add empty states, validation errors, disabled pending actions and honest connection labels. Display sample status beside sample assets. Show unavailable generation and publication actions as unavailable.
-- [ ] Detect Codex through a fixed executable lookup and a version command with a timeout. Never accept executable text from the renderer. Detection means installed, not authenticated. Show a clear install/connect instruction if absent.
-- [ ] Run the user-flow tests and manually inspect the desktop window at normal and narrow sizes. Confirm data survives a desktop restart.
-- [ ] Commit the reviewed interface.
+- [x] Write a user-flow test covering saved brand setup, sample pack creation, editing its caption and approval of the existing graphic only. Add a failure-path check that a missing video target cannot be approved.
+- [x] Build a charcoal and cobalt studio with lime and cream preview graphics, readable type, keyboard focus and reduced-motion support. Keep sources, captions and each destination visible during review.
+- [x] Add empty states, validation errors, disabled pending actions and honest connection labels. Display sample status beside sample assets. Show unavailable generation and publication actions as unavailable.
+- [x] Detect Codex through a fixed executable lookup and a version command with a timeout. Never accept executable text from the renderer. Detection means installed, not authenticated. Show a clear install/connect instruction if absent.
+- [x] Run the user-flow tests and manually inspect the desktop window at normal and narrow sizes. Confirm data survives a desktop restart.
+- [x] Commit the reviewed interface.
 
 ### Task 4: Verification and delivery
 
 Files: .github/workflows/checks.yml, README.md and the dependency lockfile.
 
-- [ ] Add automated checks for installation from the lockfile, type checks, unit tests and build on macOS. Keep signing, publishing and payment credentials out of this milestone.
-- [ ] Run all checks locally. Check git diff for personal identifiers, secrets, temporary assets and unrelated files.
-- [ ] Review approval invalidation, bridge restrictions, duplicate creation and restart recovery against the approved requirements.
-- [ ] Update README with exact run commands and implemented limitations. Push the verified implementation to main and show the running app.
+- [x] Add automated checks for installation from the lockfile, type checks, unit tests and build on macOS. Keep signing, publishing and payment credentials out of this milestone.
+- [x] Run all checks locally. Check git diff for personal identifiers, secrets, temporary assets and unrelated files.
+- [x] Review approval invalidation, bridge restrictions, duplicate creation and restart recovery against the approved requirements.
+- [x] Update README with exact run commands and implemented limitations. Push the verified implementation to main and show the running app.
 
 Completion requires a working desktop build and demonstrated local persistence. Browser-only tests do not prove the Electron bridge or packaged runtime works. Codex generation, renderer migration, live publishing and billing are separate follow-on milestones.
+
+## Verified preview
+
+Verified on macOS Apple silicon with Node.js 24: clean installation from the public-registry lockfile, type checking, 17 unit tests, the real Electron creation/review/restart flow, unsigned macOS packaging and the same user flow in the packaged application. The desktop test also verifies that malformed bridge requests do not save data, that Node.js globals are unavailable in the interface, and that installation detection does not claim an authenticated AI connection.
