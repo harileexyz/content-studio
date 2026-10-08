@@ -319,13 +319,16 @@ export class CodexClient {
                 if (
                   item.action.url.length <= 1000 &&
                   isPublicSource(item.action.url)
-                )
+                ) {
+                  url.search = "";
+                  url.hash = "";
                   input.onActivity?.({
                     kind: "source",
                     label: "Opened a source",
                     detail: url.hostname,
                     url: url.href,
                   });
+                }
               } catch {
                 // Malformed URLs are rejected later with the research result.
               }

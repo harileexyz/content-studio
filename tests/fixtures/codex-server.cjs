@@ -114,6 +114,22 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
         },
       },
     });
+    if (privateActivity)
+      send({
+        method: "item/completed",
+        params: {
+          threadId: "thread-one",
+          turnId: "turn-one",
+          item: {
+            type: "webSearch",
+            id: "web-query-secret",
+            action: {
+              type: "openPage",
+              url: "https://docs.python.org/private?access_token=secret#account",
+            },
+          },
+        },
+      });
     send({
       method: "item/agentMessage/delta",
       params: {

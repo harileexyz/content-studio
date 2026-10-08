@@ -58,9 +58,17 @@ it("does not expose search text or unsafe source URLs in activity", async () => 
     });
     expect(activity).toEqual([
       { kind: "search", label: "Searching the web" },
+      {
+        kind: "source",
+        label: "Opened a source",
+        detail: "docs.python.org",
+        url: "https://docs.python.org/private",
+      },
       { kind: "writing", label: "Writing the draft" },
     ]);
-    expect(JSON.stringify(activity)).not.toMatch(/Users|secret|internal\.example/);
+    expect(JSON.stringify(activity)).not.toMatch(
+      /Users|secret|access_token|account|internal\.example/,
+    );
   } finally {
     client.close();
   }
