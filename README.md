@@ -6,7 +6,7 @@ Turn a topic into a researched short video, a matching Instagram feed graphic, c
 
 ## Project status
 
-Desktop preview 0.1 is implemented. Brand setup, sample graphic creation, a content library, caption revisions, exact-target approval and Codex installation detection run locally. Real AI generation, video rendering, social publication and billing are not connected yet.
+Desktop preview 0.2 is implemented. Save your brand, connect your signed-in local Codex account, and research a topic into a script, source links, platform captions and an original draft graphic. Review and revise captions, then approve the exact graphic and caption locally. Video rendering, social publication and billing are not connected yet.
 
 ## Run locally
 
@@ -32,7 +32,7 @@ Data is kept in Electron's userData directory: studio.sqlite and an assets direc
 
 Sample graphics are real 1080×1350 SVG files. They are review samples, not researched content or publish-ready Instagram uploads. No video asset is created. Approval is recorded locally against the exact graphic bytes, caption and destination; it neither connects a social account nor publishes anything. Brand changes affect new packs, and existing packs keep their original brand. Revision history preserves previous captions and approvals. Refreshing or reopening the app rechecks approved assets; missing or changed files invalidate active approval and retain the old record in history.
 
-There is no standalone browser mode in this build. Launch Electron for the restricted desktop bridge and durable local storage. Codex detection invokes only the installed command-line tool's version command; it does not inspect credentials or establish an authenticated agent session.
+There is no standalone browser mode in this build. Launch Electron for the restricted desktop bridge and durable local storage. Installation detection runs the installed command-line tool’s version command. Connections → Connect Codex checks sign-in through App Server without copying credentials. Research uses the supported default model returned by Codex, without changing personal settings. The app starts an ephemeral read-only session with live web search; shell, installed account tools, plugins, hooks and other agents are disabled. Every cited source must have an observed page-open event. This proves the page was opened, not that every generated claim is correct; drafts still need human review.
 
 ## Proposed stack
 
@@ -78,7 +78,7 @@ Jobs persist their stage, attempts and errors. Interrupted work resumes from ver
 4. A clearly labeled sample pack for exercising the review flow without AI credentials.
 5. Revision tracking and exact-target approval rules, tested independently of AI.
 
-This milestone does not include live research, generated video, social publishing or billing. Subsequent milestones connect Codex, migrate rendering with actual media validation, and add publishing with independent verification for all targets.
+The first milestone established local sample creation. Version 0.2 adds live Codex research. Next milestones migrate video rendering with real media checks and add publishing with independent verification for each destination.
 
 ## Commercial constraints
 
@@ -158,8 +158,22 @@ Files: .github/workflows/checks.yml, README.md and the dependency lockfile.
 - [x] Review approval invalidation, bridge restrictions, duplicate creation and restart recovery against the approved requirements.
 - [x] Update README with exact run commands and implemented limitations. Push the verified implementation to main and show the running app.
 
-Completion requires a working desktop build and demonstrated local persistence. Browser-only tests do not prove the Electron bridge or packaged runtime works. Codex generation, renderer migration, live publishing and billing are separate follow-on milestones.
+Completion requires a working desktop build and demonstrated local persistence. Browser-only tests do not prove the Electron bridge or packaged runtime works. The Codex research continuation is described below; video rendering, live publishing and billing remain follow-on milestones.
 
 ## Verified preview
 
-Verified on macOS Apple silicon with Node.js 24: clean installation from the public-registry lockfile, type checking, 17 unit tests, the real Electron creation/review/restart flow, unsigned macOS packaging and the same user flow in the packaged application. The desktop test also verifies that malformed bridge requests do not save data, that Node.js globals are unavailable in the interface, and that installation detection does not claim an authenticated AI connection.
+Verified on macOS Apple silicon with Node.js 24: clean installation from the public-registry lockfile, type checking, 36 unit tests, the real Electron creation/review/restart flow, unsigned macOS packaging and the same user flow in the packaged application. The desktop test also verifies that malformed bridge requests do not save data, that Node.js globals are unavailable in the interface, and that installation detection does not claim an authenticated AI connection.
+
+## Codex research milestone
+
+Approved continuation: connect the existing local Codex command-line tool through App Server. The studio checks authentication without handling credentials. A topic and brand voice produce a structured research draft: a short narration script, evidence links with claim mappings, limitations, platform captions and an original draft graphic. The draft needs human review; no video or publication is created.
+
+Implementation: add a bounded JSON-line App Server client with handshake, request timeouts, safe denial of unsupported tool requests, cancellation and child-process cleanup; persist research jobs before starting; restore interrupted jobs as interrupted rather than silently rerunning paid work; validate structured results and require observed live web research; extend existing creation/review/connection screens; keep old sample packs readable. Verify transport failure/cancellation, malformed research, duplicate requests, restart state, approval rules, desktop behavior and one real signed-in research run. Existing user authorization selects inline execution and pushing verified work to main.
+
+Research jobs are saved before generation starts. The app shows progress and supports cancellation. Interrupted work never reruns automatically; Research again starts a new request using the connected account allowance. Completed packs are recovered even if the app closed before recording completion. Old sample packs remain readable. A failed disk write keeps the current job status visible and asks the user to check disk space.
+
+Live verification: the installed Codex 0.157.1 produced a Python dictionary.get draft and opened the cited official Python documentation. The opt-in live test requires STUDIO_LIVE_CODEX=1; routine checks use a local protocol fixture and do not spend account allowance. SVG graphics remain review drafts; Instagram export and rendered video are separate work.
+
+If the first response omits observed source opens, the same research session gets one bounded request to open and verify those links. This uses additional account allowance. If evidence is still missing, the job fails and no pack is saved. There is no automatic retry after a crash or cancelled job.
+
+Version 0.2 verification also covers local protocol failure/denial/cancellation, malformed and oversized server output, missing evidence, request deduplication, brand snapshots, disk-write failure and research-job recovery. Both desktop flows passed in development and the unsigned packaged app. The real signed-in research test passed with the final tool restrictions; other live attempts correctly rejected drafts with missing source opens.
