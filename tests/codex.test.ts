@@ -30,7 +30,6 @@ it("handshakes, denies command approval and collects final output and opened sou
       {
         kind: "search",
         label: "Searching the web",
-        detail: "official Python dictionary documentation",
       },
       {
         kind: "source",
@@ -40,6 +39,28 @@ it("handshakes, denies command approval and collects final output and opened sou
       },
       { kind: "writing", label: "Writing the draft" },
     ]);
+  } finally {
+    client.close();
+  }
+});
+it("does not expose search text or unsafe source URLs in activity", async () => {
+  const client = new CodexClient(command);
+  const activity: Array<{ kind: string; label: string; detail?: string; url?: string }> = [];
+  try {
+    await client.start();
+    await client.generate({
+      cwd: process.cwd(),
+      instructions: "Research only",
+      prompt: "PRIVATE_ACTIVITY",
+      schema: { type: "object" },
+      signal: new AbortController().signal,
+      onActivity: (event: any) => activity.push(event),
+    });
+    expect(activity).toEqual([
+      { kind: "search", label: "Searching the web" },
+      { kind: "writing", label: "Writing the draft" },
+    ]);
+    expect(JSON.stringify(activity)).not.toMatch(/Users|secret|internal\.example/);
   } finally {
     client.close();
   }

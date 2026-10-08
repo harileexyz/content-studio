@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import type { ResearchActivityInput } from "../../shared/models";
+import { isPublicSource } from "../../shared/research";
 type ObjectValue = Record<string, any>;
 interface Pending {
   resolve: (value: any) => void;
@@ -315,7 +316,10 @@ export class CodexClient {
               opened.add(item.action.url);
               try {
                 const url = new URL(item.action.url);
-                if (url.protocol === "https:")
+                if (
+                  item.action.url.length <= 1000 &&
+                  isPublicSource(item.action.url)
+                )
                   input.onActivity?.({
                     kind: "source",
                     label: "Opened a source",
@@ -327,17 +331,9 @@ export class CodexClient {
               }
             }
             if (item.action?.type === "search") {
-              const query =
-                typeof item.action.query === "string"
-                  ? item.action.query
-                  : Array.isArray(item.action.queries) &&
-                      typeof item.action.queries[0] === "string"
-                    ? item.action.queries[0]
-                    : undefined;
               input.onActivity?.({
                 kind: "search",
                 label: "Searching the web",
-                detail: query?.replace(/\s+/g, " ").trim().slice(0, 180),
               });
             }
           }

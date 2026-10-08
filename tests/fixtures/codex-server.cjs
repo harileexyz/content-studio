@@ -1,5 +1,6 @@
 const readline = require("node:readline");
 let initialized = false;
+let privateActivity = false;
 function send(message) {
   process.stdout.write(JSON.stringify(message) + "\n");
 }
@@ -48,6 +49,7 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
         result: { thread: { id: "thread-one" }, model: "default-model" },
       });
   } else if (m.method === "turn/start") {
+    privateActivity = m.params.input[0].text === "PRIVATE_ACTIVITY";
     send({
       id: m.id,
       result: { turn: { id: "turn-one", status: "inProgress" } },
@@ -88,7 +90,9 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
           id: "web-search",
           action: {
             type: "search",
-            query: "official Python dictionary documentation",
+            query: privateActivity
+              ? "read /Users/private/account token=secret"
+              : "official Python dictionary documentation",
           },
         },
       },
@@ -103,7 +107,9 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
           id: "web-one",
           action: {
             type: "openPage",
-            url: "https://docs.python.org/3/library/stdtypes.html",
+            url: privateActivity
+              ? "https://user:secret@internal.example.com/private"
+              : "https://docs.python.org/3/library/stdtypes.html",
           },
         },
       },
