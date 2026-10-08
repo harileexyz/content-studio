@@ -11,18 +11,35 @@ it("handshakes, denies command approval and collects final output and opened sou
     await client.start();
     const auth = await client.account();
     expect(auth).toEqual({ authenticated: true, mode: "chatgpt" });
+    const activity: Array<{ kind: string; label: string; detail?: string }> =
+      [];
     const result = await client.generate({
       cwd: process.cwd(),
       instructions: "Research only",
       prompt: "Test",
       schema: { type: "object" },
       signal: new AbortController().signal,
+      onActivity: (event: any) => activity.push(event),
     });
     expect(result.text).toBe('{"answer":"Research complete"}');
     expect(result.openedUrls).toEqual([
       "https://docs.python.org/3/library/stdtypes.html",
     ]);
     expect(result.model).toBe("default-model");
+    expect(activity).toEqual([
+      {
+        kind: "search",
+        label: "Searching the web",
+        detail: "official Python dictionary documentation",
+      },
+      {
+        kind: "source",
+        label: "Opened a source",
+        detail: "docs.python.org",
+        url: "https://docs.python.org/3/library/stdtypes.html",
+      },
+      { kind: "writing", label: "Writing the draft" },
+    ]);
   } finally {
     client.close();
   }

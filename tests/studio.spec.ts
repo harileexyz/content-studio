@@ -49,6 +49,12 @@ test("desktop persists a brand and exact approval through restart", async () => 
     await page
       .getByRole("button", { name: "Connections", exact: true })
       .click();
+    await expect(
+      page.getByRole("heading", { name: "Set up Codex" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Copy install command" }).click();
+    await expect(page.getByText("Install command copied.")).toBeVisible();
+    await page.screenshot({ path: "work/codex-setup.png", fullPage: true });
     await page.getByRole("button", { name: "Check installation" }).click();
     await expect(
       page.getByText(
@@ -115,11 +121,15 @@ test("desktop persists a brand and exact approval through restart", async () => 
       "approveTarget",
       "cancelResearch",
       "connectProvider",
+      "copyCodexCommand",
       "createResearchPack",
       "createSamplePack",
       "detectProvider",
       "getState",
+      "openCodexInstallGuide",
+      "openResearchSource",
       "openSource",
+      "openTerminal",
       "reviseTarget",
       "saveBrand",
     ]);
@@ -161,6 +171,23 @@ test("desktop reviews a researched pack and reports interrupted work without ret
       topic: "An interrupted topic",
       requestId: "pending-request",
       error: null,
+      activity: [
+        {
+          id: "activity-start",
+          at: "2026-10-08T08:00:00.000Z",
+          kind: "search",
+          label: "Searching the web",
+          detail: "official Python dictionary documentation",
+        },
+        {
+          id: "activity-source",
+          at: "2026-10-08T08:00:01.000Z",
+          kind: "source",
+          label: "Opened a source",
+          detail: "docs.python.org",
+          url: "https://docs.python.org/3/library/stdtypes.html#dict.get",
+        },
+      ],
     });
     store.close();
     app = await launch(dir);
@@ -169,6 +196,13 @@ test("desktop reviews a researched pack and reports interrupted work without ret
       page.getByText(
         "The app closed before research finished. Start a new request to try again.",
       ),
+    ).toBeVisible();
+    await expect(page.getByText("Searching the web")).toBeVisible();
+    await expect(
+      page.getByText("official Python dictionary documentation"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Open source" }),
     ).toBeVisible();
     await page.getByRole("button", { name: /Python dictionaries/ }).click();
     await expect(

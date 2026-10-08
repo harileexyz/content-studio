@@ -36,6 +36,17 @@ export interface Revision {
   targets: Target[];
   savedAt: string;
 }
+export type ResearchActivityKind =
+  "status" | "search" | "source" | "writing" | "complete" | "error";
+export interface ResearchActivity {
+  id: string;
+  at: string;
+  kind: ResearchActivityKind;
+  label: string;
+  detail?: string;
+  url?: string;
+}
+export type ResearchActivityInput = Omit<ResearchActivity, "id" | "at">;
 export interface ContentPack {
   id: string;
   requestId: string;
@@ -71,6 +82,7 @@ export interface Job {
   topic?: string;
   requestId?: string;
   createdAt?: string;
+  activity?: ResearchActivity[];
 }
 export interface ProviderStatus {
   installed: boolean;
@@ -112,4 +124,13 @@ export interface StudioBridge {
   createResearchPack(input: CreateInput): Promise<StudioState>;
   cancelResearch(input: { jobId: string }): Promise<StudioState>;
   openSource(input: { packId: string; sourceIndex: number }): Promise<void>;
+  openResearchSource(input: {
+    jobId: string;
+    activityId: string;
+  }): Promise<void>;
+  copyCodexCommand(input: {
+    command: "install" | "signin";
+  }): Promise<StudioState>;
+  openCodexInstallGuide(): Promise<StudioState>;
+  openTerminal(): Promise<StudioState>;
 }

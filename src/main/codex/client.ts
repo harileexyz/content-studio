@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import type { ResearchActivityInput } from "../../shared/models";
 type ObjectValue = Record<string, any>;
 interface Pending {
   resolve: (value: any) => void;
@@ -18,6 +19,7 @@ export interface GenerationInput {
   session?: { threadId: string; model: string };
   signal: AbortSignal;
   onProgress?: (stage: "researching" | "writing") => void;
+  onActivity?: (event: ResearchActivityInput) => void;
 }
 export interface GenerationResult {
   text: string;
@@ -171,7 +173,7 @@ export class CodexClient {
       clientInfo: {
         name: "content-studio",
         title: "Content Studio",
-        version: "0.2.0",
+        version: "0.3.0",
       },
     });
     this.send({ method: "initialized", params: {} });
@@ -236,6 +238,7 @@ export class CodexClient {
     let final = "";
     let fallback = "";
     let searched = false;
+    let writingReported = false;
     const opened = new Set<string>();
     return new Promise<GenerationResult>((resolve, reject) => {
       let done = false;
@@ -308,8 +311,35 @@ export class CodexClient {
             if (
               item.action?.type === "openPage" &&
               typeof item.action.url === "string"
-            )
+            ) {
               opened.add(item.action.url);
+              try {
+                const url = new URL(item.action.url);
+                if (url.protocol === "https:")
+                  input.onActivity?.({
+                    kind: "source",
+                    label: "Opened a source",
+                    detail: url.hostname,
+                    url: url.href,
+                  });
+              } catch {
+                // Malformed URLs are rejected later with the research result.
+              }
+            }
+            if (item.action?.type === "search") {
+              const query =
+                typeof item.action.query === "string"
+                  ? item.action.query
+                  : Array.isArray(item.action.queries) &&
+                      typeof item.action.queries[0] === "string"
+                    ? item.action.queries[0]
+                    : undefined;
+              input.onActivity?.({
+                kind: "search",
+                label: "Searching the web",
+                detail: query?.replace(/\s+/g, " ").trim().slice(0, 180),
+              });
+            }
           }
           if (item?.type === "agentMessage" && typeof item.text === "string") {
             fallback = item.text;
@@ -321,7 +351,18 @@ export class CodexClient {
               finish(new Error("Research progress could not be saved."));
               return;
             }
+            if (!writingReported) {
+              writingReported = true;
+              input.onActivity?.({
+                kind: "writing",
+                label: "Writing the draft",
+              });
+            }
           }
+        }
+        if (method === "item/agentMessage/delta" && !writingReported) {
+          writingReported = true;
+          input.onActivity?.({ kind: "writing", label: "Writing the draft" });
         }
         if (method === "turn/completed") {
           if (params.turn?.status === "completed") finish();

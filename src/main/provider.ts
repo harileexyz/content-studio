@@ -1,21 +1,29 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, delimiter } from "node:path";
+import { homedir } from "node:os";
 import type { ProviderStatus } from "../shared/models";
 const execute = promisify(execFile);
-export async function findCodex(
-  candidates?: string[],
-): Promise<{ path: string; version: string } | null> {
-  const paths = candidates ?? [
+export function defaultCodexPaths(
+  userHome = homedir(),
+  envPath = process.env.PATH ?? "",
+): string[] {
+  return [
     ...new Set([
+      join(userHome, ".local", "bin", "codex"),
       "/opt/homebrew/bin/codex",
       "/usr/local/bin/codex",
-      ...(process.env.PATH ?? "")
+      ...envPath
         .split(delimiter)
         .filter(Boolean)
         .map((dir) => join(dir, "codex")),
     ]),
   ];
+}
+export async function findCodex(
+  candidates?: string[],
+): Promise<{ path: string; version: string } | null> {
+  const paths = candidates ?? defaultCodexPaths();
   for (const path of paths) {
     try {
       const { stdout } = await execute(path, ["--version"], {

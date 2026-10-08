@@ -3,7 +3,11 @@ import { join } from "node:path";
 import type { Store } from "../storage";
 import type { Workflow } from "../workflow";
 import { parseRequest } from "../../shared/contracts";
-import type { CreateInput, Job } from "../../shared/models";
+import type {
+  CreateInput,
+  Job,
+  ResearchActivityInput,
+} from "../../shared/models";
 import { generateResearch } from "./research";
 type Generator = typeof generateResearch;
 export class ResearchJobs {
@@ -88,8 +92,29 @@ export class ResearchJobs {
       topic: valid.topic,
       requestId: valid.requestId,
       createdAt: new Date().toISOString(),
+      activity: [
+        {
+          id: randomUUID(),
+          at: new Date().toISOString(),
+          kind: "status",
+          label: "Starting Codex",
+        },
+      ],
     };
     this.store.saveJob(job);
+    let current = job;
+    const update = (patch: Partial<Job>) => {
+      current = { ...current, ...patch };
+      this.save(current);
+    };
+    const addActivity = (event: ResearchActivityInput) => {
+      update({
+        activity: [
+          ...(current.activity ?? []),
+          { ...event, id: randomUUID(), at: new Date().toISOString() },
+        ].slice(-60),
+      });
+    };
     const controller = new AbortController();
     const task = (async () => {
       try {
@@ -99,26 +124,35 @@ export class ResearchJobs {
           cwd: join(this.dir, "research", job.id),
           signal: controller.signal,
           onProgress: (stage) => {
-            if (!controller.signal.aborted)
-              this.store.saveJob({ ...job, stage });
+            if (!controller.signal.aborted) update({ stage });
+          },
+          onActivity: (event) => {
+            if (!controller.signal.aborted) addActivity(event);
           },
         });
         if (controller.signal.aborted) return;
+        addActivity({ kind: "writing", label: "Creating the content pack" });
         const pack = this.workflow.createResearchPack(valid, result.draft, {
           ...result,
           brand,
         });
-        this.store.saveJob({ ...job, packId: pack.id, stage: "ready" });
+        addActivity({ kind: "complete", label: "Draft ready" });
+        update({ packId: pack.id, stage: "ready", error: null });
       } catch (error) {
         if (!controller.signal.aborted) {
           {
             const savedPack = this.store.getByRequest(valid.requestId);
-            this.save(
+            const failed =
               savedPack && !savedPack.sample
-                ? { ...job, packId: savedPack.id, stage: "ready", error: null }
+                ? {
+                    ...current,
+                    packId: savedPack.id,
+                    stage: "ready" as const,
+                    error: null,
+                  }
                 : {
-                    ...job,
-                    stage: "failed",
+                    ...current,
+                    stage: "failed" as const,
                     error:
                       error instanceof Error &&
                       /^(Codex |Research |Sign in |Install Codex |Save your brand )/.test(
@@ -126,8 +160,11 @@ export class ResearchJobs {
                       )
                         ? error.message
                         : "Research could not be saved or completed. Check available disk space and try again.",
-                  },
-            );
+                  };
+            current = failed;
+            if (failed.stage === "failed")
+              addActivity({ kind: "error", label: "Research stopped" });
+            else this.save(failed);
           }
         }
       } finally {
@@ -146,6 +183,15 @@ export class ResearchJobs {
       ...job,
       stage: "cancelled",
       error: "Research cancelled. Nothing was published.",
+      activity: [
+        ...(job.activity ?? []),
+        {
+          id: randomUUID(),
+          at: new Date().toISOString(),
+          kind: "error" as const,
+          label: "Research cancelled",
+        },
+      ].slice(-60),
     });
   }
   async waitForIdle() {

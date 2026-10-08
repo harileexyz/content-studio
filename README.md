@@ -6,7 +6,7 @@ Turn a topic into a researched short video, a matching Instagram feed graphic, c
 
 ## Project status
 
-Desktop preview 0.2 is implemented. Save your brand, connect your signed-in local Codex account, and research a topic into a script, source links, platform captions and an original draft graphic. Review and revise captions, then approve the exact graphic and caption locally. Video rendering, social publication and billing are not connected yet.
+Desktop preview 0.3 is implemented. Save your brand, connect your signed-in local Codex account, and watch a live timeline while Codex searches, opens sources, checks evidence and writes the draft. Research produces a script, source links, platform captions and an original draft graphic. Video rendering, social publication and billing are not connected yet.
 
 ## Run locally
 
@@ -33,6 +33,8 @@ Data is kept in Electron's userData directory: studio.sqlite and an assets direc
 Sample graphics are real 1080×1350 SVG files. They are review samples, not researched content or publish-ready Instagram uploads. No video asset is created. Approval is recorded locally against the exact graphic bytes, caption and destination; it neither connects a social account nor publishes anything. Brand changes affect new packs, and existing packs keep their original brand. Revision history preserves previous captions and approvals. Refreshing or reopening the app rechecks approved assets; missing or changed files invalidate active approval and retain the old record in history.
 
 There is no standalone browser mode in this build. Launch Electron for the restricted desktop bridge and durable local storage. Installation detection runs the installed command-line tool’s version command. Connections → Connect Codex checks sign-in through App Server without copying credentials. Research uses the supported default model returned by Codex, without changing personal settings. The app starts an ephemeral read-only session with live web search; shell, installed account tools, plugins, hooks and other agents are disabled. Every cited source must have an observed page-open event. This proves the page was opened, not that every generated claim is correct; drafts still need human review.
+
+The Connections screen guides new users through the official macOS installer, opening Terminal, running Codex and signing in with ChatGPT. Installation and sign-in commands are fixed by the app; the renderer cannot submit arbitrary commands. Content Studio copies commands or opens the official guide only after a user clicks the matching button. It never runs the installer automatically.
 
 ## Proposed stack
 
@@ -172,8 +174,12 @@ Implementation: add a bounded JSON-line App Server client with handshake, reques
 
 Research jobs are saved before generation starts. The app shows progress and supports cancellation. Interrupted work never reruns automatically; Research again starts a new request using the connected account allowance. Completed packs are recovered even if the app closed before recording completion. Old sample packs remain readable. A failed disk write keeps the current job status visible and asks the user to check disk space.
 
+Each job also keeps a bounded activity timeline with safe, human-readable events: connection, web search, opened source hostnames, writing, evidence checks, cancellation and completion. Source-opening events may link to public HTTPS pages. Raw model reasoning, credentials, local paths, personal configuration and untrusted tool output are never shown in this timeline.
+
 Live verification: the installed Codex 0.157.1 produced a Python dictionary.get draft and opened the cited official Python documentation. The opt-in live test requires STUDIO_LIVE_CODEX=1; routine checks use a local protocol fixture and do not spend account allowance. SVG graphics remain review drafts; Instagram export and rendered video are separate work.
 
 If the first response omits observed source opens, the same research session gets one bounded request to open and verify those links. This uses additional account allowance. If evidence is still missing, the job fails and no pack is saved. There is no automatic retry after a crash or cancelled job.
 
 Version 0.2 verification also covers local protocol failure/denial/cancellation, malformed and oversized server output, missing evidence, request deduplication, brand snapshots, disk-write failure and research-job recovery. Both desktop flows passed in development and the unsigned packaged app. The real signed-in research test passed with the final tool restrictions; other live attempts correctly rejected drafts with missing source opens.
+
+Version 0.3 adds the live activity timeline and guided Codex setup. Verification covers fixed setup actions, the standalone installer path, safe activity persistence, validated source links, the desktop flows in development and the packaged app, and a real signed-in run that showed search, source-opening, writing and evidence-check activity.

@@ -68,7 +68,7 @@ export function App() {
         .finally(() => {
           pending = false;
         });
-    }, 1500);
+    }, 800);
     return () => {
       active = false;
       clearInterval(timer);
@@ -91,6 +91,18 @@ export function App() {
       );
     } finally {
       setBusy(false);
+    }
+  }
+  async function external(run: () => Promise<void>) {
+    setError("");
+    try {
+      await run();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "The link could not be opened.",
+      );
     }
   }
   function navigate(next: Screen) {
@@ -154,7 +166,7 @@ export function App() {
             <span>{(state?.brand?.name ?? "S").slice(0, 1).toUpperCase()}</span>
             <div>
               <strong>{state?.brand?.name ?? "Your studio"}</strong>
-              <small>Desktop preview · 0.2</small>
+              <small>Desktop preview · 0.3</small>
             </div>
           </div>
         </div>
@@ -234,6 +246,18 @@ export function App() {
                   busy={busy}
                   onCheck={() => action(() => bridge.detectProvider())}
                   onConnect={() => action(() => bridge.connectProvider())}
+                  onCopyCommand={(command) =>
+                    action(
+                      () => bridge.copyCodexCommand({ command }),
+                      command === "install"
+                        ? "Install command copied."
+                        : "Sign-in command copied.",
+                    )
+                  }
+                  onOpenGuide={() =>
+                    action(() => bridge.openCodexInstallGuide())
+                  }
+                  onOpenTerminal={() => action(() => bridge.openTerminal())}
                 />
               )}
               {screen === "review" && pack && (
@@ -326,7 +350,7 @@ export function App() {
                   <h2>Research activity</h2>
                   {state.jobs.slice(0, 5).map((job) => (
                     <div className="research-job" key={job.id}>
-                      <div>
+                      <div className="research-job-copy">
                         <strong>{job.topic}</strong>
                         <p>
                           {job.stage === "researching"
@@ -337,6 +361,61 @@ export function App() {
                                 ? "Draft ready for review"
                                 : (job.error ?? job.stage)}
                         </p>
+                        {!!job.activity?.length && (
+                          <div
+                            className="activity-timeline"
+                            aria-live={
+                              ["researching", "writing"].includes(job.stage)
+                                ? "polite"
+                                : "off"
+                            }
+                          >
+                            {job.activity.map((item, index) => (
+                              <div
+                                className={`activity-event ${item.kind}`}
+                                key={item.id}
+                              >
+                                <span
+                                  className="activity-mark"
+                                  aria-hidden="true"
+                                />
+                                <div>
+                                  <strong>{item.label}</strong>
+                                  {item.detail && <p>{item.detail}</p>}
+                                  {item.url && (
+                                    <button
+                                      className="text-button"
+                                      onClick={() =>
+                                        void external(() =>
+                                          bridge.openResearchSource({
+                                            jobId: job.id,
+                                            activityId: item.id,
+                                          }),
+                                        )
+                                      }
+                                    >
+                                      Open source
+                                    </button>
+                                  )}
+                                </div>
+                                <time dateTime={item.at}>
+                                  {new Date(item.at).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </time>
+                                {index === job.activity!.length - 1 &&
+                                  ["researching", "writing"].includes(
+                                    job.stage,
+                                  ) && (
+                                    <span className="activity-working">
+                                      Working
+                                    </span>
+                                  )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       {["researching", "writing"].includes(job.stage) ? (
                         <button

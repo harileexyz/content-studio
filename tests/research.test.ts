@@ -114,6 +114,76 @@ it("persists a job before running, deduplicates requests, and never reruns inter
   resumed.close();
   recovered.close();
 });
+it("persists safe live activity while research runs", async () => {
+  const { dir, store, workflow } = await setup();
+  const generate = async (input: any) => {
+    input.onActivity({
+      kind: "search",
+      label: "Searching the web",
+      detail: "official Python docs",
+    });
+    input.onActivity({
+      kind: "source",
+      label: "Opened a source",
+      detail: "docs.python.org",
+      url: draft.sources[0].url,
+    });
+    return {
+      draft: parseResearch(draft),
+      model: "default",
+      openedUrls: [draft.sources[0].url],
+      threadId: "t",
+    };
+  };
+  const jobs = new ResearchJobs(store, workflow, dir, generate as any);
+  const job = jobs.start({
+    topic: "Python dictionaries",
+    requestId: "activity",
+  });
+  await jobs.waitForIdle();
+  const saved = store.getJobs().find((item) => item.id === job.id) as any;
+  expect(
+    saved.activity.map((item: any) => ({
+      kind: item.kind,
+      label: item.label,
+      detail: item.detail,
+      url: item.url,
+    })),
+  ).toEqual([
+    {
+      kind: "status",
+      label: "Starting Codex",
+      detail: undefined,
+      url: undefined,
+    },
+    {
+      kind: "search",
+      label: "Searching the web",
+      detail: "official Python docs",
+      url: undefined,
+    },
+    {
+      kind: "source",
+      label: "Opened a source",
+      detail: "docs.python.org",
+      url: draft.sources[0].url,
+    },
+    {
+      kind: "writing",
+      label: "Creating the content pack",
+      detail: undefined,
+      url: undefined,
+    },
+    {
+      kind: "complete",
+      label: "Draft ready",
+      detail: undefined,
+      url: undefined,
+    },
+  ]);
+  jobs.close();
+  store.close();
+});
 it("cancellation prevents even a late successful response from saving a pack", async () => {
   const { dir, store, workflow } = await setup();
   let resolve!: (value: any) => void;

@@ -2,7 +2,7 @@ import { afterEach, expect, it } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { detectCodex } from '../src/main/provider'
+import { defaultCodexPaths, detectCodex } from '../src/main/provider'
 const dirs: string[] = []
 afterEach(() => dirs.splice(0).forEach(dir => rmSync(dir, { recursive: true, force: true })))
 it('missing Codex gives an actionable disconnected status', async () => {
@@ -12,4 +12,7 @@ it('a version command proves installation without claiming authentication', asyn
   const dir = mkdtempSync(join(tmpdir(), 'studio-cli-')); dirs.push(dir)
   const path = join(dir, 'codex'); writeFileSync(path, '#!/bin/sh\nprintf "codex-cli 1.2.3\\n"\n', { mode: 0o700 })
   const status = await detectCodex([path]); expect(status.installed).toBe(true); expect(status.version).toBe('codex-cli 1.2.3'); expect(status.connected).toBe(false)
+})
+it('checks the official standalone installer location even when it is absent from PATH', () => {
+  expect(defaultCodexPaths('/Users/new-user', '/usr/bin')).toContain('/Users/new-user/.local/bin/codex')
 })

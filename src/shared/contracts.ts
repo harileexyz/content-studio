@@ -13,6 +13,9 @@ export const schemas = {
   getState: z.undefined(),
   detectProvider: z.undefined(),
   connectProvider: z.undefined(),
+  copyCodexCommand: z.strictObject({ command: z.enum(["install", "signin"]) }),
+  openCodexInstallGuide: z.undefined(),
+  openTerminal: z.undefined(),
   createResearchPack: z.strictObject({
     topic: z.string().trim().min(1).max(120),
     requestId: id,
@@ -22,6 +25,7 @@ export const schemas = {
     packId: id,
     sourceIndex: z.number().int().nonnegative().max(5),
   }),
+  openResearchSource: z.strictObject({ jobId: id, activityId: id }),
   saveBrand: z.strictObject({
     name: z.string().trim().min(1).max(50),
     colors: z.tuple([

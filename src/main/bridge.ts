@@ -1,4 +1,4 @@
-import { ipcMain, shell, type BrowserWindow } from "electron";
+import { clipboard, ipcMain, shell, type BrowserWindow } from "electron";
 import { ZodError } from "zod";
 import {
   isTrustedFrame,
@@ -69,6 +69,28 @@ export function registerBridge(
           case "detectProvider":
             provider = await detectCodex();
             break;
+          case "copyCodexCommand":
+            clipboard.writeText(
+              (valid as { command: "install" | "signin" }).command === "install"
+                ? "curl -fsSL https://chatgpt.com/codex/install.sh | sh"
+                : "codex",
+            );
+            break;
+          case "openCodexInstallGuide":
+            await shell.openExternal(
+              "https://learn.chatgpt.com/docs/codex/cli",
+            );
+            break;
+          case "openTerminal": {
+            const result = await shell.openPath(
+              "/System/Applications/Utilities/Terminal.app",
+            );
+            if (result)
+              throw new Error(
+                "Codex setup could not open Terminal. Open it from Applications instead.",
+              );
+            break;
+          }
           case "connectProvider": {
             const found = await findCodex();
             if (!found) throw new Error("Install Codex before connecting.");
@@ -85,7 +107,7 @@ export function registerBridge(
                   ? auth.mode === "apiKey"
                     ? "Connected with Codex API access. Research uses your configured API billing."
                     : "Connected to your signed-in Codex account. Research uses its allowance."
-                  : "Sign in with codex login in your terminal, then reconnect.",
+                  : "Run codex in Terminal, choose Sign in with ChatGPT, then reconnect.",
               };
             } finally {
               client.close();
@@ -109,6 +131,20 @@ export function registerBridge(
             if (!source || !isPublicSource(source.url))
               throw new Error("This source link is unavailable.");
             await shell.openExternal(source.url);
+            break;
+          }
+          case "openResearchSource": {
+            const { jobId, activityId } = valid as {
+              jobId: string;
+              activityId: string;
+            };
+            const activity = jobs
+              .getJobs()
+              .find((job) => job.id === jobId)
+              ?.activity?.find((item) => item.id === activityId);
+            if (!activity?.url || !isPublicSource(activity.url))
+              throw new Error("This research source link is unavailable.");
+            await shell.openExternal(activity.url);
             break;
           }
         }

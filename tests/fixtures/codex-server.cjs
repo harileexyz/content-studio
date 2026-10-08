@@ -85,12 +85,36 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
         turnId: "turn-one",
         item: {
           type: "webSearch",
+          id: "web-search",
+          action: {
+            type: "search",
+            query: "official Python dictionary documentation",
+          },
+        },
+      },
+    });
+    send({
+      method: "item/completed",
+      params: {
+        threadId: "thread-one",
+        turnId: "turn-one",
+        item: {
+          type: "webSearch",
           id: "web-one",
           action: {
             type: "openPage",
             url: "https://docs.python.org/3/library/stdtypes.html",
           },
         },
+      },
+    });
+    send({
+      method: "item/agentMessage/delta",
+      params: {
+        threadId: "thread-one",
+        turnId: "turn-one",
+        itemId: "msg-one",
+        delta: '{"answer":',
       },
     });
     send({

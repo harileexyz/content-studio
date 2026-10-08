@@ -23,5 +23,10 @@ const bridge: StudioBridge = {
   createResearchPack: (input) => call("createResearchPack", input),
   cancelResearch: (input) => call("cancelResearch", input),
   openSource: (input) => call("openSource", input).then(() => {}),
+  openResearchSource: (input) =>
+    call("openResearchSource", input).then(() => {}),
+  copyCodexCommand: (input) => call("copyCodexCommand", input),
+  openCodexInstallGuide: () => call("openCodexInstallGuide"),
+  openTerminal: () => call("openTerminal"),
 };
 contextBridge.exposeInMainWorld("studio", bridge);

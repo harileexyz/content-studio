@@ -7,7 +7,7 @@ import {
   sourceKey,
   type ResearchDraft,
 } from "../../shared/research";
-import type { Brand } from "../../shared/models";
+import type { Brand, ResearchActivityInput } from "../../shared/models";
 export interface ResearchResult extends Omit<
   GenerationResult,
   "text" | "searched"
@@ -21,6 +21,7 @@ export async function generateResearch(input: {
   cwd: string;
   signal: AbortSignal;
   onProgress: (stage: "researching" | "writing") => void;
+  onActivity?: (event: ResearchActivityInput) => void;
 }): Promise<ResearchResult> {
   const found = await findCodex();
   if (!found)
@@ -36,10 +37,12 @@ export async function generateResearch(input: {
       throw new Error(
         "Sign in to Codex in your terminal, then reconnect in the studio.",
       );
+    input.onActivity?.({ kind: "status", label: "Connected to Codex" });
     let result = await client.generate({
       cwd: input.cwd,
       signal: input.signal,
       onProgress: input.onProgress,
+      onActivity: input.onActivity,
       instructions,
       prompt: JSON.stringify({
         topic: input.topic,
@@ -64,10 +67,15 @@ export async function generateResearch(input: {
       draft.sources.some((source) => !opened.has(sourceKey(source.url)))
     ) {
       input.onProgress("researching");
+      input.onActivity?.({
+        kind: "status",
+        label: "Checking cited sources",
+      });
       const correction = await client.generate({
         cwd: input.cwd,
         signal: input.signal,
         onProgress: input.onProgress,
+        onActivity: input.onActivity,
         instructions,
         schema: outputSchema,
         session: { threadId: result.threadId, model: result.model },
